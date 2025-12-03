@@ -1,67 +1,157 @@
-import React from 'react';
-import { Activity, Siren, Lock, Moon, Sun } from 'lucide-react';
+// ============================================================
+// Header.jsx  (FINAL UPDATED)
+// ------------------------------------------------------------
+// Top bar of the dashboard.
+//
+// Shows:
+// ✅ App Branding (TRAFFIC GUARD ULTRA)
+// ✅ System Mode Indicator (LIVE / SIMULATION / OFFLINE)
+// ✅ Emergency / Manual / Normal status icon
+// ✅ Day / Night chip
+// ✅ Weather chip (CLEAR / RAIN / NIGHT)
+// ============================================================
 
-export default function Header({ connected, isEmergency, isManual, isNight }) {
+import React from 'react';
+import {
+  Activity,
+  Siren,
+  Lock,
+  Moon,
+  Sun,
+  CloudRain,
+  Cloud,
+} from 'lucide-react';
+
+export default function Header({
+  connected, // true → WebSocket backend connected
+  simulateMode, // true → simulation mode ON
+  isEmergency, // true → current state is EMERGENCY
+  isManual, // true → logic.mode === 'MANUAL'
+  isNight, // from env.is_night
+  weatherMode, // 'CLEAR' | 'RAIN' | 'NIGHT'
+}) {
+  // ------------------------------------------------------------
+  // Decide weather icon + label
+  // ------------------------------------------------------------
+  const renderWeatherIcon = () => {
+    if (weatherMode === 'RAIN') {
+      return (
+        <>
+          <CloudRain size={14} className='text-cyan-400' />
+          <span>RAIN</span>
+        </>
+      );
+    }
+    if (weatherMode === 'NIGHT') {
+      return (
+        <>
+          <Moon size={14} className='text-indigo-300' />
+          <span>NIGHT</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <Cloud size={14} className='text-slate-300' />
+        <span>CLEAR</span>
+      </>
+    );
+  };
+
+  // ------------------------------------------------------------
+  // Status Icon:
+  // EMERGENCY > MANUAL > NORMAL
+  // ------------------------------------------------------------
+  const renderStatusIcon = () => {
+    if (isEmergency) {
+      return <Siren className='text-white w-6 h-6' />;
+    }
+    if (isManual) {
+      return <Lock className='text-white w-6 h-6' />;
+    }
+    return <Activity className='text-white w-6 h-6' />;
+  };
+
+  // ------------------------------------------------------------
+  // Connection Mode Chip:
+  // - LIVE: backend connected + not in simulation
+  // - SIMULATION: simulateMode === true
+  // - OFFLINE: backend disconnected and sim off
+  // ------------------------------------------------------------
+  let modeLabel = 'OFFLINE';
+  let modeClasses = 'bg-slate-900/60 text-slate-300 border border-slate-600/70';
+  let dotClasses = 'bg-slate-500 shadow-[0_0_8px_rgba(148,163,184,0.9)]';
+
+  if (simulateMode) {
+    modeLabel = 'SIMULATION';
+    modeClasses =
+      'bg-yellow-900/40 text-yellow-200 border border-yellow-500/60';
+    dotClasses = 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.9)]';
+  } else if (connected) {
+    modeLabel = 'LIVE';
+    modeClasses = 'bg-green-900/40 text-green-300 border border-green-500/60';
+    dotClasses = 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.9)]';
+  }
+
   return (
-    <header className='flex justify-between items-center bg-slate-900/60 p-4 rounded-2xl border border-slate-800/60 mb-4 backdrop-blur-md shadow-lg'>
-      <div className='flex items-center gap-4'>
-        {/* Status Icon Box */}
+    <header className='flex flex-col md:flex-row justify-between items-center p-4 rounded-2xl border mb-2 backdrop-blur-xl shadow-2xl transition-all duration-500 bg-slate-900/70 border-slate-700/70'>
+      {/* ============================================================
+        LEFT : LOGO + TITLE + STATUS ICON
+      ============================================================ */}
+      <div className='flex items-center gap-4 w-full md:w-auto justify-between md:justify-start mb-3 md:mb-0'>
+        {/* Colored Status Icon Block */}
         <div
           className={`p-3 rounded-xl shadow-lg transition-all duration-500 ${
             isEmergency
-              ? 'bg-blue-600 animate-bounce'
+              ? 'bg-red-600 animate-pulse'
               : isManual
               ? 'bg-purple-600'
               : 'bg-indigo-600'
           }`}>
-          {isEmergency ? (
-            <Siren className='text-white w-6 h-6' />
-          ) : isManual ? (
-            <Lock className='text-white w-6 h-6' />
-          ) : (
-            <Activity className='text-white w-6 h-6' />
-          )}
+          {renderStatusIcon()}
         </div>
 
-        {/* Title & Mode Text */}
-        <div>
-          <h1 className='text-2xl font-bold text-white tracking-tight'>
-            Traffic<span className='text-indigo-400'>Guard</span>{' '}
-            <span className='text-slate-500 font-light'>Ultra</span>
+        {/* Title + Subtitle */}
+        <div className='text-left'>
+          <h1 className='text-xl md:text-2xl font-black tracking-tight text-white'>
+            TRAFFIC
+            <span className='text-indigo-400'> GUARD</span>{' '}
+            <span className='text-slate-400 font-light'>ULTRA</span>
           </h1>
-          <div className='flex gap-2 items-center'>
-            <p className='text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold'>
-              {isManual ? 'MANUAL OVERRIDE' : 'AUTONOMOUS MODE'}
-            </p>
-            {isNight && (
-              <span className='text-[10px] bg-indigo-900 text-indigo-300 px-2 rounded-full flex items-center gap-1'>
-                <Moon size={10} /> NIGHT VISION
-              </span>
-            )}
-          </div>
+
+          <p className='text-[11px] text-slate-400 uppercase tracking-[0.25em] font-semibold'>
+            Adaptive Traffic Management Dashboard
+          </p>
         </div>
       </div>
 
-      {/* Right Side Statuses */}
-      <div className='flex gap-4 items-center'>
-        <div className='flex items-center gap-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700'>
+      {/* ============================================================
+        RIGHT : ENVIRONMENT CHIPS + CONNECTION STATUS
+      ============================================================ */}
+      <div className='flex items-center gap-3 w-full md:w-auto justify-end flex-wrap md:flex-nowrap'>
+        {/* Night / Day Chip */}
+        <div className='flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-semibold bg-slate-800/60 border-slate-600 text-slate-200'>
           {isNight ? (
-            <Moon size={16} className='text-indigo-400' />
+            <Moon size={14} className='text-indigo-400' />
           ) : (
-            <Sun size={16} className='text-yellow-400' />
+            <Sun size={14} className='text-yellow-400' />
           )}
-          <span className='text-xs font-bold text-slate-300'>
-            {isNight ? 'NIGHT' : 'DAY'}
-          </span>
+          <span>{isNight ? 'NIGHT' : 'DAY'}</span>
         </div>
 
+        {/* Weather Chip */}
+        <div className='flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-semibold bg-slate-800/60 border-slate-600 text-slate-200'>
+          {renderWeatherIcon()}
+        </div>
+
+        {/* Connection / Mode Chip */}
         <div
-          className={`text-xs font-bold px-3 py-1 rounded-full ${
-            connected
-              ? 'bg-green-900/50 text-green-400 border border-green-800'
-              : 'bg-red-900/50 text-red-400'
-          }`}>
-          {connected ? '● LIVE' : '○ OFFLINE'}
+          className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-2 ${modeClasses}`}>
+          {/* Status dot */}
+          <span className={`w-2 h-2 rounded-full ${dotClasses}`} />
+
+          {/* Label text */}
+          {modeLabel}
         </div>
       </div>
     </header>

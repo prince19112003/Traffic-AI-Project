@@ -1,0 +1,107 @@
+/* ============================================================
+   MiniMap: Moving vehicle dots per lane
+   ------------------------------------------------------------ */
+.mini-vehicle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  opacity: 0;
+}
+
+/* NORTH: move from junction (bottom) toward top (entry) */
+.mini-vehicle-north {
+  left: 50%;
+  transform: translateX(-50%);
+  animation: drive-north 1.4s linear infinite;
+}
+@keyframes drive-north {
+  0% {
+    top: 100%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0;
+  }
+}
+
+/* SOUTH: move from top toward bottom (junction) */
+.mini-vehicle-south {
+  left: 50%;
+  transform: translateX(-50%);
+  animation: drive-south 1.4s linear infinite;
+}
+@keyframes drive-south {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/* EAST: move from left towards right */
+.mini-vehicle-east {
+  top: 50%;
+  transform: translateY(-50%);
+  animation: drive-east 1.4s linear infinite;
+}
+@keyframes drive-east {
+  0% {
+    left: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* WEST: move from right towards left */
+.mini-vehicle-west {
+  top: 50%;
+  transform: translateY(-50%);
+  animation: drive-west 1.4s linear infinite;
+}
+@keyframes drive-west {
+  0% {
+    left: 100%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    left: 0%;
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   Blinking signal dots (GREEN / YELLOW)
+   ------------------------------------------------------------ */
+@keyframes blink-soft {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+.animate-blink-soft {
+  animation: blink-soft 1s ease-in-out infinite;
+}
