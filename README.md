@@ -76,4 +76,4 @@ npm run dev
 - **Uvicorn/FastAPI**: Capable of handling hundreds of concurrent client connections for large-scale monitoring centers.
 
 ---
-*Created by Antigravity AI for the Traffic AI Project.*
+
