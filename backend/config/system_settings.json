@@ -1,0 +1,21 @@
+{
+  "MODEL_NAME": "yolov8n.pt",
+  "TIME_SLOTS": {
+    "low": 30,
+    "medium": 60,
+    "high": 90
+  },
+  "YELLOW_TIME": 4,
+  "SAFETY_YELLOW_TIME": 6,
+  "NIGHT_BRIGHTNESS_THRESHOLD": 50,
+  "STALLED_COUNT_THRESHOLD": 8,
+  "STALLED_FRAME_LIMIT": 40,
+  "ROI_RECTS": {
+    "north": [220, 140, 420, 260],
+    "east": [360, 220, 620, 340],
+    "south": [220, 260, 420, 380],
+    "west": [20, 220, 280, 340]
+  },
+  "EMERGENCY_CLASSES": [0],
+  "CONFIDENCE_THRESHOLD": 0.35
+}

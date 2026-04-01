@@ -1,16 +1,13 @@
 # ============================================================
 # controller.py
 # ------------------------------------------------------------
-# TRAFFIC SIGNAL LOGIC CONTROLLER
+# TRAFFIC SIGNAL LOGIC CONTROLLER (WEIGHTED ADAPTIVE VERSION)
 #
-# Handles:
-# - Phase switching (N → E → S → W)
-# - Adaptive green time (based on vehicle count)
-# - Rain mode (longer yellow)
-# - ECO mode (low traffic)
-# - Emergency override (ambulance)
-# - Manual override from frontend
-# - Violation prediction (possible red light jump)
+# Logic:
+# - Weighted Density: Lanes with more vehicles get more priority points.
+# - Wait-Time Fairness: Long-waiting lanes gain "priority weight" over time.
+# - Emergency Preemption: Immediate override for emergency vehicles.
+# - Adaptive Timers: Dynamic calculation of green duration.
 # ============================================================
 
 import time
@@ -26,261 +23,172 @@ class TrafficController:
     """
     TrafficController
     -----------------
-    Decides:
-    - Which lane is GREEN
-    - How long GREEN lasts
-    - When to switch YELLOW → NEXT GREEN
-    - When to activate ECO mode
+    An intelligent state machine that decides signal transitions
+    based on a Weighted Priority Algorithm.
     """
 
     def __init__(self):
-        # Fixed direction list: N → E → S → W
         self.phases = DIRECTIONS
-
-        # Current phase index (0 = north, 1 = east, ...)
         self.current_phase_idx = 0
-
-        # Current signal state (GREEN/YELLOW/RED/ECO/EMERGENCY)
         self.current_state = "RED"
-
-        # Timer (seconds remaining for current state)
         self.timer: float | int | str = 0
-
-        # Used to compute delta time per update()
         self.last_update_time = time.time()
 
-        # Track when each direction last received green (for fairness / future use)
-        self.last_green_time = {d: time.time() for d in self.phases}
-        self.MAX_WAIT_THRESHOLD = 90  # If a lane waits > 90s → can be forced (future use)
+        # Tracking for fairness
+        self.lane_wait_start = {d: time.time() for d in self.phases}
+        self.MAX_WAIT_SECONDS = 120  # Absolute max wait before forced switch
 
-        # Pre-calculated next duration (lookahead logic)
         self.next_duration = TIME_SLOTS["low"]
-
-        # Flags
         self.emergency_active = False
-        self.emergency_dir = None
         self.is_raining = False
         self.manual_override = False
         self.system_status = "System Running"
-
-        # For predictive violation detection
         self.predicted_violation_dir = None
 
-    # ============================================================
-    # Adaptive green time based on vehicle count
-    # ============================================================
-
     def calculate_adaptive_time(self, count: int) -> int:
-        """
-        Adaptive Green Time:
-        - 0–15  → 30s
-        - 16–25 → 60s
-        - >25   → 90s
-        """
-        if count <= 15:
-            return TIME_SLOTS["low"]
-        if count <= 25:
-            return TIME_SLOTS["medium"]
+        """Adaptive Green Time calculation based on vehicle density."""
+        if count <= 10: return TIME_SLOTS["low"]
+        if count <= 25: return TIME_SLOTS["medium"]
         return TIME_SLOTS["high"]
 
-    # ============================================================
-    # Function to directly force a phase to GREEN
-    # ============================================================
-
     def set_phase(self, idx: int, duration: int):
-        """Switch to lane[idx] and make it GREEN for <duration> seconds."""
+        """Force a direction to GREEN."""
         self.current_phase_idx = idx % len(self.phases)
         self.timer = duration
         self.current_state = "GREEN"
         self.emergency_active = False
-
+        
         active_dir = self.phases[self.current_phase_idx]
-        self.last_green_time[active_dir] = time.time()
-
-    # ============================================================
-    # Manual commands from frontend (FORCE_NORTH, STOP_ALL, AUTO)
-    # ============================================================
+        # Reset wait time for current green lane
+        self.lane_wait_start[active_dir] = time.time()
 
     def handle_manual_command(self, cmd: str):
-        # -------------------- AUTO MODE --------------------
         if cmd == "AUTO":
             self.manual_override = False
             self.system_status = "Auto Mode Active"
-            self.current_phase_idx = 0
             self.set_phase(0, TIME_SLOTS["low"])
-            return
-
-        # -------------------- FORCE MODE --------------------
-        if cmd.startswith("FORCE_"):
+        elif cmd == "STOP_ALL":
+            self.manual_override = True
+            self.current_state = "RED"
+            self.timer = 999
+            self.system_status = "EMERGENCY STOP"
+        elif cmd.startswith("FORCE_"):
             direction = cmd.split("_")[1].lower()
-
             if direction in self.phases:
                 self.manual_override = True
                 self.current_phase_idx = self.phases.index(direction)
                 self.current_state = "GREEN"
-                self.timer = 999  # Infinite timer until changed
-                self.system_status = f"Manual Lock → {direction.upper()}"
-            return
+                self.timer = 999
+                self.system_status = f"Manual Lock: {direction.upper()}"
 
-        # -------------------- EMERGENCY STOP --------------------
-        if cmd == "STOP_ALL":
-            self.manual_override = True
-            self.current_state = "RED"
-            self.timer = 999
-            self.system_status = "EMERGENCY STOP (Manual)"
-            return
+    def _get_weighted_next_phase(self, counts: dict) -> int:
+        """
+        WEIGHTED PRIORITY ALGORITHM
+        Calculates a 'Priority Score' for each RED lane.
+        Score = (Vehicle Count * 2) + (Wait Time / 10)
+        """
+        best_score = -1
+        best_idx = (self.current_phase_idx + 1) % len(self.phases)
+        now = time.time()
 
-    # ============================================================
-    # MAIN UPDATE STEP (called every cycle from server)
-    # ============================================================
+        for i, d in enumerate(self.phases):
+            if i == self.current_phase_idx: continue
+            
+            count = counts.get(d, 0)
+            wait_time = now - self.lane_wait_start[d]
+            
+            # Score calculation
+            score = (count * 2.5) + (wait_time / 8.0)
+            
+            # Forced switch if waiting too long
+            if wait_time > self.MAX_WAIT_SECONDS:
+                score += 500
+
+            if score > best_score:
+                best_score = score
+                best_idx = i
+        
+        return best_idx
 
     def update(self, current_counts: dict, has_emergency: bool, emergency_loc: str | None):
-        """
-        Main State Machine:
-        - Called every ~50ms from backend loop
-        - Updates timers, phases, emergency handling, rain, eco...
-        """
-
         now = time.time()
         delta = now - self.last_update_time
         self.last_update_time = now
 
-        # -------------------- MANUAL OVERRIDE --------------------
         if self.manual_override:
             return self._build_state_response()
 
-        # -------------------- EMERGENCY HANDLING --------------------
-        if has_emergency and emergency_loc:
-            if emergency_loc in self.phases:
-                idx = self.phases.index(emergency_loc)
-                self.current_phase_idx = idx
-                self.timer = 15
-                self.current_state = "GREEN"
-                self.system_status = f"🚑 EMERGENCY → {emergency_loc.upper()}"
-                return self._build_state_response(mode="PRIORITY", state="EMERGENCY")
+        # 1. EMERGENCY (Absolute Priority)
+        if has_emergency and emergency_loc in self.phases:
+            idx = self.phases.index(emergency_loc)
+            if self.current_phase_idx != idx or self.current_state != "GREEN":
+                self.set_phase(idx, 20) # Give 20s for emergency clearance
+                self.system_status = f"🚑 EMERGENCY: {emergency_loc.upper()}"
+            return self._build_state_response(mode="PRIORITY", state="EMERGENCY")
 
-        # -------------------- RAIN CHECK --------------------
+        # 2. RAIN CHECK
         self.is_raining = current_counts.get("rain_trigger", 0) > 0
         if self.is_raining:
-            self.system_status = "🌧️ Rain Mode (Extended Yellow)"
+            self.system_status = "🌧️ Weather Alert: Rain Mode"
 
-        # -------------------- ECO MODE CHECK --------------------
-        total_traffic = sum(current_counts.get(d, 0) for d in self.phases)
-
-        # Enter ECO if very low traffic and not currently GREEN
-        if total_traffic < 10 and self.current_state != "GREEN" and self.timer <= 0:
-            self.current_state = "ECO"
-            self.system_status = "🌙 ECO MODE (Low Traffic)"
-            return self._build_state_response(
-                mode="ECO", state="ECO", timer="SLEEP", signal="YELLOW"
-            )
-
-        # Stay in ECO until traffic rises again
-        if self.current_state == "ECO":
-            if total_traffic >= 10:
-                self.set_phase(0, TIME_SLOTS["low"])
-                self.system_status = "Traffic detected → Exiting ECO Mode"
-            else:
-                return self._build_state_response(
-                    mode="ECO", state="ECO", timer="SLEEP", signal="YELLOW"
-                )
-
-        # ============================================================
-        # TIMER COUNTDOWN
-        # ============================================================
-
+        # 3. TIMER MANAGEMENT
         if isinstance(self.timer, (int, float)) and self.timer > 0:
             self.timer -= delta
 
-        # -------------------- 5-second LOOKAHEAD --------------------
-        if self.current_state == "GREEN" and isinstance(self.timer, (int, float)):
-            if 4.5 <= self.timer <= 5.5:
-                next_idx = (self.current_phase_idx + 1) % len(self.phases)
-                next_dir = self.phases[next_idx]
-                count = current_counts.get(next_dir, 0)
-                self.next_duration = self.calculate_adaptive_time(count)
+        # 4. TRANSITIONS
+        if self.current_state == "GREEN" and self.timer <= 0:
+            # Transition to YELLOW
+            self.current_state = "YELLOW"
+            self.timer = SAFETY_YELLOW_TIME if self.is_raining else YELLOW_TIME
+            
+            # Pre-calculate next phase using WEIGHTED logic
+            next_idx = self._get_weighted_next_phase(current_counts)
+            next_dir = self.phases[next_idx]
+            self.next_duration = self.calculate_adaptive_time(current_counts.get(next_dir, 0))
+            self._temp_next_idx = next_idx # Store for yellow transition
 
-        # -------------------- SMART SKIP --------------------
-        active_dir = self.phases[self.current_phase_idx]
-        active_count = current_counts.get(active_dir, 0)
+        elif self.current_state == "YELLOW" and self.timer <= 0:
+            # Transition to next calculated GREEN
+            self.set_phase(self._temp_next_idx, self.next_duration)
 
-        if self.current_state == "GREEN" and isinstance(self.timer, (int, float)):
-            if self.timer > 5 and active_count == 0:
-                # No more vehicles, no need to hold green
-                self.timer = 0  # Skip straight to Yellow
+        # 5. ECO MODE (if all lanes empty)
+        total_traffic = sum(current_counts.get(d, 0) for d in self.phases)
+        if total_traffic == 0 and self.current_state != "GREEN" and self.timer <= 0:
+            self.current_state = "ECO"
+            self.system_status = "🌙 ECO Mode: Idle"
+            return self._build_state_response(mode="ECO", state="ECO", timer="SLEEP", signal="YELLOW")
 
-        # ============================================================
-        # STATE TRANSITIONS
-        # ============================================================
+        if self.current_state == "ECO" and total_traffic > 0:
+            self.system_status = "Traffic Detected: Waking Up"
+            self.set_phase(0, TIME_SLOTS["low"])
 
-        # GREEN → YELLOW
-        if self.current_state == "GREEN" and isinstance(self.timer, (int, float)):
-            if self.timer <= 0:
-                self.current_state = "YELLOW"
-                self.timer = SAFETY_YELLOW_TIME if self.is_raining else YELLOW_TIME
-
-        # YELLOW → NEXT GREEN
-        elif self.current_state == "YELLOW" and isinstance(self.timer, (int, float)):
-            if self.timer <= 0:
-                next_idx = (self.current_phase_idx + 1) % len(self.phases)
-                self.set_phase(next_idx, self.next_duration)
-
-        # ============================================================
-        # Predictive violation (car may jump red light)
-        # ============================================================
+        # 6. VIOLATION PREDICTION
         self._update_predicted_violation(current_counts)
 
         return self._build_state_response()
 
-    # ============================================================
-
     def _update_predicted_violation(self, current_counts: dict):
-        """Checks if any other lane might attempt to jump during YELLOW."""
         self.predicted_violation_dir = None
+        if self.current_state == "YELLOW" and self.timer <= 2:
+            active = self.phases[self.current_phase_idx]
+            for d in self.phases:
+                if d != active and current_counts.get(d, 0) >= 4: # High density in wait lane
+                    self.predicted_violation_dir = d
+                    break
 
-        if self.current_state == "YELLOW" and isinstance(self.timer, (int, float)):
-            if self.timer <= 3:
-                active = self.phases[self.current_phase_idx]
-
-                for d in self.phases:
-                    if d != active and current_counts.get(d, 0) >= 3:
-                        self.predicted_violation_dir = d
-                        break
-
-    # ============================================================
-    # Final JSON data sent to UI
-    # ============================================================
-
-    def _build_state_response(
-        self,
-        mode: str = "AUTO",
-        state: str | None = None,
-        timer: int | str | None = None,
-        signal: str | None = None,
-    ):
-        # If override not given, use current state
-        if state is None:
-            state = self.current_state
-
-        # Timer: numeric only in normal mode
+    def _build_state_response(self, mode="AUTO", state=None, timer=None, signal=None):
+        if state is None: state = self.current_state
         if timer is None:
-            if isinstance(self.timer, (int, float)):
-                timer = max(0, int(self.timer))
-            else:
-                timer = self.timer
-
+            timer = max(0, int(self.timer)) if isinstance(self.timer, (int, float)) else self.timer
+        
         active = self.phases[self.current_phase_idx]
-        next_dir = self.phases[(self.current_phase_idx + 1) % len(self.phases)]
-
-        # Start with all RED
+        next_dir = self.phases[(self.current_phase_idx + 1) % len(self.phases)] # Default next
+        
         signal_map = {p: "RED" for p in self.phases}
-
-        # If a forced signal is given (e.g. in ECO → all YELLOW)
         if signal:
             signal_map = {p: signal for p in self.phases}
         else:
-            if state != "ECO":
-                signal_map[active] = state
+            if state != "ECO": signal_map[active] = state
 
         return {
             "active_dir": active,

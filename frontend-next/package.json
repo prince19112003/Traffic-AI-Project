@@ -1,0 +1,27 @@
+{
+  "name": "traffic-guard-enterprise",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.364.0",
+    "next": "14.1.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.2",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.4",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3"
+  }
+}

@@ -30,6 +30,7 @@ from config import (
     STALLED_COUNT_THRESHOLD,
     STALLED_FRAME_LIMIT,
     ROI_RECTS,
+    CONFIDENCE_THRESHOLD,
 )
 
 
@@ -227,7 +228,7 @@ class VehicleDetector:
         if batch_frames:
             try:
                 # YOLO supports list/ndarray → returns list-like results
-                results = self.model(batch_frames, conf=0.35, verbose=False)
+                results = self.model(batch_frames, conf=CONFIDENCE_THRESHOLD, verbose=False)
                 for idx, res in enumerate(results):
                     results_list[idx] = res
             except Exception as e:
