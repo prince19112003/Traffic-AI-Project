@@ -1,6 +1,6 @@
 # 🚦 TrafficGuard AI: Next-Gen Urban Traffic Management (UHD)
 
-![Dashboard Live Screenshot](assets/dashboard_live.png)
+![Dashboard Live Screenshot](dashboard_live.png)
 
 > [!CAUTION]
 > **PROPRIETARY SYSTEM**: This project is the intellectual property of **Prince**. No unauthorized copying, distribution, or commercial use is permitted without written consent. See [LICENSE](file:///c:/Users/princ/Desktop/New%20folder/Traffic-AI-Project/LICENSE) for details.
