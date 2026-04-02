@@ -1,60 +1,99 @@
 "use client";
 import React, { useState } from 'react';
-import { Lock, Volume2, VolumeX, StopCircle, PlayCircle, BarChart3, ShieldAlert, Power, ChevronDown, ChevronUp, Activity, Settings } from 'lucide-react';
+import { Menu, X, Lock, Volume2, VolumeX, Power, ChevronDown, ChevronUp, Activity, Settings, LayoutDashboard, ShieldAlert, BadgeAlert } from 'lucide-react';
 
-const SectionHeader = ({ title, icon: Icon, isOpen, toggle, color = 'text-slate-400' }) => (
-  <button onClick={toggle} className='w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/40 transition-colors mb-1 group'>
-    <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${isOpen ? color : 'text-slate-500 group-hover:text-slate-300'}`}>
-      <Icon size={16} />{title}
-    </div>
-    <div className='text-slate-600'>{isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</div>
-  </button>
-);
-
-export default function Sidebar({ analytics, violations, alerts, sendCommand, voiceEnabled, setVoiceEnabled, simulateMode, setSimulateMode, setShowAdmin, engineStatus }) {
+export default function Sidebar({ 
+  analytics, alerts, violations, sendCommand, voiceEnabled, setVoiceEnabled, 
+  simulateMode, setSimulateMode, setShowAdmin, engineStatus, isCollapsed, toggleSidebar, connected 
+}) {
   const [openSections, setOpenSections] = useState({ admin: true, analytics: true, alerts: true, violations: true });
   const toggleSection = (section) => setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-  const total = Object.values(analytics || {}).reduce((a, b) => a + b, 0);
-  const getPercent = v => (total === 0 ? 0 : Math.min(100, (v / total) * 100));
+
+  if (isCollapsed) {
+    return (
+      <aside className='w-16 h-full glass-panel flex flex-col items-center py-4 gap-6 transition-all duration-500'>
+        <button onClick={toggleSidebar} className='p-2 rounded-xl bg-white/5 hover:bg-white/10 active-press'>
+          <Menu size={20} className='text-slate-400' />
+        </button>
+        <div className='flex flex-col gap-4 mt-8'>
+          <Activity size={20} className={`transition-colors ${connected ? 'text-emerald-400 animate-pulse' : 'text-rose-500'}`} />
+          <ShieldAlert size={20} className='text-yellow-400' />
+          <BadgeAlert size={20} className='text-red-400' />
+          <button onClick={() => setShowAdmin(true)} className='p-2 rounded-xl hover:bg-white/5 active-press'>
+            <Settings size={20} className='text-slate-500' />
+          </button>
+        </div>
+      </aside>
+    );
+  }
 
   return (
-    <aside className='w-full md:w-80 rounded-2xl p-3 flex flex-col gap-2 backdrop-blur-xl border transition-all duration-500 bg-slate-900/70 border-slate-800 shadow-2xl overflow-y-auto custom-scroll'>
-      <div className='p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between mb-2 shadow-inner'>
-        <div className='flex items-center gap-2 text-indigo-400'>
-          <Activity size={14} className='animate-[pulse_1.5s_infinite]' />
-          <span className='text-[10px] font-bold uppercase tracking-wider'>System Engine</span>
+    <aside className='w-full md:w-80 h-full glass-panel flex flex-col gap-2 p-3 transition-all duration-500 overflow-y-auto custom-scroll'>
+      <div className='flex items-center justify-between p-2 mb-2'>
+        <div className='flex items-center gap-2 text-indigo-400 font-black tracking-tighter'>
+          <LayoutDashboard size={20} />
+          <span className='text-sm'>GUARD CONSOLE</span>
         </div>
-        <span className='text-[10px] font-mono text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30'>
-          {engineStatus ? `${engineStatus.cpu_usage}% CPU` : "READY"}
-        </span>
+        <button onClick={toggleSidebar} className='p-2 rounded-xl bg-white/5 hover:bg-white/10 active-press'>
+          <X size={18} className='text-slate-500' />
+        </button>
       </div>
 
-      <div className='border-b border-slate-800/50 pb-2 mb-2'>
-        <SectionHeader title="Admin Mode" icon={Lock} isOpen={openSections.admin} toggle={() => toggleSection('admin')} color="text-blue-400" />
+      <div className={`p-3 rounded-xl border flex items-center justify-between mb-2 shadow-inner transition-all ${connected ? 'bg-emerald-500/10 border-emerald-500/20 indicator-pulse' : 'bg-red-500/10 border-red-500/20'}`}>
+        <div className={`flex items-center gap-2 ${connected ? 'text-emerald-400' : 'text-red-400'}`}>
+          <Activity size={14} className={connected ? 'animate-pulse' : ''} />
+          <span className='text-[10px] font-black uppercase tracking-widest'>{connected ? 'Engine Online' : 'Engine Offline'}</span>
+        </div>
+        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${connected ? 'text-emerald-300 bg-emerald-500/20 border-emerald-500/30' : 'text-red-300 bg-red-500/20 border-red-500/30'}`}>
+          {connected ? (engineStatus ? `${engineStatus.cpu_usage}% CPU` : "ACTIVE") : "NOSYNC"}
+        </span>
+      </div>
+      
+      {/* ADMIN CONTROLS */}
+      <div className='border-b border-white/5 pb-2 mb-2'>
+        <button onClick={() => toggleSection('admin')} className='w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-all mb-1 group'>
+          <div className='flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400'>
+            <Lock size={14} /> Admin Controls
+          </div>
+          <ChevronDown size={14} className={`text-slate-600 transition-transform ${openSections.admin ? 'rotate-180' : ''}`} />
+        </button>
         {openSections.admin && (
-          <div className='px-2 space-y-3 pb-2'>
+          <div className='px-2 space-y-3 pb-2 animate-[fadeIn_0.3s_ease-out]'>
             <div className='flex gap-2'>
-              <button onClick={() => setSimulateMode(!simulateMode)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold border flex items-center justify-center gap-2 ${simulateMode ? 'bg-yellow-900/40 border-yellow-500 text-yellow-100' : 'bg-slate-800/60 border-slate-700 text-slate-400'}`}><Power size={12} /> {simulateMode ? 'SIM ON' : 'SIM OFF'}</button>
-              <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold border flex items-center justify-center gap-2 ${voiceEnabled ? 'bg-emerald-900/40 border-emerald-500 text-emerald-100' : 'bg-slate-800/60 border-slate-700 text-slate-400'}`}>{voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />} {voiceEnabled ? 'VOICE' : 'MUTE'}</button>
+              <button onClick={() => setSimulateMode(!simulateMode)} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black border flex items-center justify-center gap-2 active-press transition-all ${simulateMode ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-200' : 'bg-slate-800/40 border-slate-700/50 text-slate-400'}`}><Power size={12} /> {simulateMode ? 'SIM ON' : 'SIM OFF'}</button>
+              <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black border flex items-center justify-center gap-2 active-press transition-all ${voiceEnabled ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-200' : 'bg-slate-800/40 border-slate-700/50 text-slate-400'}`}>{voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />} {voiceEnabled ? 'VOICE' : 'MUTE'}</button>
             </div>
             <div className='grid grid-cols-2 gap-2'>
               {['NORTH', 'EAST', 'SOUTH', 'WEST'].map(dir => (
-                <button key={dir} onClick={() => sendCommand(`FORCE_${dir}`)} className='text-[9px] py-1.5 rounded-lg bg-slate-800/80 hover:bg-indigo-600 border border-slate-700 hover:border-indigo-500 font-bold uppercase'>{dir}</button>
+                <button key={dir} onClick={() => sendCommand(`FORCE_${dir}`)} className='text-[9px] py-1.5 rounded-lg bg-slate-800/40 hover:bg-indigo-500 border border-white/5 hover:border-indigo-400 font-bold uppercase active-press transition-all'>{dir}</button>
               ))}
             </div>
-            <button onClick={() => setShowAdmin(true)} className='w-full py-2 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 text-indigo-300 hover:text-white text-[10px] font-bold flex items-center justify-center gap-2'><Settings size={12} /> CONFIGURE SYSTEM</button>
+            <button onClick={() => setShowAdmin(true)} className='w-full py-2 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 text-indigo-300 hover:text-white text-[10px] font-black flex items-center justify-center gap-2 active-press transition-all'>
+              <Settings size={14} /> CONFIGURE SYSTEM
+            </button>
           </div>
         )}
       </div>
 
-      {/* Simplified Analytics, Alerts and Violations for size limits */}
-      <div className='border-b border-slate-800/50 pb-2 mb-2'>
-        <SectionHeader title="Security Alerts" icon={ShieldAlert} isOpen={openSections.alerts} toggle={() => toggleSection('alerts')} color="text-yellow-400" />
+      {/* SYSTEM ALERTS */}
+      <div className='border-b border-white/5 pb-2 mb-2'>
+        <button onClick={() => toggleSection('alerts')} className='w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-all mb-1 group'>
+          <div className='flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-yellow-400'>
+            <ShieldAlert size={14} /> Critical Alerts
+          </div>
+          <ChevronDown size={14} className={`text-slate-600 transition-transform ${openSections.alerts ? 'rotate-180' : ''}`} />
+        </button>
         {openSections.alerts && (
-          <div className='px-2 pb-2 space-y-2 max-h-40 overflow-y-auto custom-scroll'>
+          <div className='px-2 pb-2 space-y-2 max-h-48 overflow-y-auto custom-scroll'>
             {alerts?.length > 0 ? alerts.map((a,i) => (
-              <div key={i} className='p-2 bg-yellow-400/5 border border-yellow-400/10 rounded-lg text-[10px] text-yellow-200/70'>{a.message}</div>
-            )) : <div className='text-[10px] text-slate-600 italic'>No anomalies detected...</div>}
+              <div key={i} className='p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-[10px] text-red-200 flex flex-col gap-1'>
+                <div className='flex justify-between font-bold'>
+                  <span>VIOLATION</span>
+                  <span className='opacity-50'>{new Date().toLocaleTimeString()}</span>
+                </div>
+                <div className='opacity-80'>{a.message}</div>
+              </div>
+            )) : <div className='text-[10px] text-slate-600 italic px-2'>No active threats detected...</div>}
           </div>
         )}
       </div>

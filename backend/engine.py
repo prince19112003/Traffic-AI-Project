@@ -37,19 +37,13 @@ class TrafficEngine(mp.Process):
         self.running = True
         
     def run(self):
+        # Local import to prevent pickling issues on Windows
+        from ultralytics import YOLO
+        import os
+        
         print("[ENGINE] Initializing Multiprocess AI Engine...")
-        
-        # 1. Load ONNX model for CPU speed (exporting if needed)
-        # Note: In a real system, you'd have the .onnx file ready.
-        # Here we use the YOLO abstraction which can handle ONNX.
-        onnx_path = MODEL_NAME.replace(".pt", ".onnx")
-        if not os.path.exists(onnx_path):
-            print(f"[ENGINE] Exporting {MODEL_NAME} to ONNX for CPU optimization...")
-            model = YOLO(MODEL_NAME)
-            model.export(format="onnx", imgsz=640)
-        
-        self.model = YOLO(onnx_path, task="detect")
-        print(f"[ENGINE] YOLO ONNX Loaded successfully.")
+        self.model = YOLO(MODEL_NAME, task="detect")
+        print(f"[ENGINE] YOLO PyTorch Loaded successfully.")
 
         # 2. Open Captures
         self.caps = {}
@@ -68,7 +62,9 @@ class TrafficEngine(mp.Process):
             # Check for config updates
             if not self.config_queue.empty():
                 new_cfg = self.config_queue.get()
-                # Update thresholds etc if needed
+                if "sim_emerg" in new_cfg:
+                    self.sim_emerg_active = new_cfg["sim_emerg"]
+                    self.sim_emerg_dir = new_cfg.get("sim_emerg_dir", "north")
                 pass
 
             start_time = time.time()
@@ -97,8 +93,8 @@ class TrafficEngine(mp.Process):
             output_payload = {
                 "counts": {d: 0 for d in DIRECTIONS},
                 "feeds": {},
-                "is_emerg": False,
-                "emerg_loc": None,
+                "is_emerg": self.sim_emerg_active if hasattr(self, 'sim_emerg_active') else False,
+                "emerg_loc": self.sim_emerg_dir if hasattr(self, 'sim_emerg_dir') else None,
                 "analytics": {"car": 0, "bike": 0, "bus": 0, "truck": 0},
                 "is_night": False,
                 "timestamp": time.time()

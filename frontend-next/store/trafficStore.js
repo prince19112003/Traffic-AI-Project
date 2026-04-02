@@ -5,6 +5,7 @@ export const useTrafficStore = create((set, get) => ({
   simulateMode: false,
   voiceEnabled: true,
   showAdmin: false,
+  isSidebarCollapsed: false,
   data: {
     feeds: {},
     counts: {},
@@ -20,6 +21,7 @@ export const useTrafficStore = create((set, get) => ({
   setSimulateMode: (mode) => set({ simulateMode: mode }),
   setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
   setShowAdmin: (show) => set({ showAdmin: show }),
+  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
   
   updateData: (payload) => set((state) => ({
     data: {

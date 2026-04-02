@@ -54,26 +54,16 @@ CONFIDENCE_THRESHOLD = settings["CONFIDENCE_THRESHOLD"]
 # --------------------------------------------
 # SERVER / TRAFFIC SETUP
 # --------------------------------------------
-PORT = 8765
+PORT = 8000
 DIRECTIONS = ["north", "east", "south", "west"]
 
 # --------------------------------------------
 # AUTO-DETECT CAMERAS
 # --------------------------------------------
 def detect_cameras():
-    sources = {}
-    for i in range(1, 5):
-        cap = cv2.VideoCapture(i)
-        if cap.isOpened():
-            print(f"[CAM] External camera detected at index {i}")
-            sources[DIRECTIONS[i-1]] = {"type": "camera", "value": i}
-        else:
-            sources[DIRECTIONS[i-1]] = {
-                "type": "video",
-                "value": "videos/fallback.mp4",
-            }
-        cap.release()
-    return sources
+    # Optimization: Use a public sample video for the demo/dev environment
+    sample_url = "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4"
+    return {d: {"type": "video", "value": sample_url} for d in DIRECTIONS}
 
 SOURCES = detect_cameras()
 FALLBACK_VIDEO = "videos/fallback.mp4"
