@@ -1,4 +1,4 @@
-# 🚦 TrafficGuard AI: Next-Gen Urban Traffic Management (UHD)
+# 🚦 TrafficGuard AI: Next-Gen Urban Traffic Management 
 
 ![Dashboard Live Screenshot](dashboard_live.png)
 
