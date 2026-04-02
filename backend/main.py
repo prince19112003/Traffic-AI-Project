@@ -58,6 +58,7 @@ async def broadcast_task():
                     "status": "System Optimized (CPU)"
                 }
                 latest_data = payload
+                print(f"[SERVER] Broadcasting AI Data. Next Direction: {logic_status.get('next_dir')}")
                 
                 # Send to Arduino Hardware
                 if arduino:

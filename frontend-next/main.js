@@ -17,12 +17,20 @@ function createWindow() {
   // Remove top menu bar for a clean dashboard look
   Menu.setApplicationMenu(null);
 
-  // Load the Next.js local server
-  // Note: During production build, you'd load the static export file
-  win.loadURL('http://localhost:3000');
+  // Load the Next.js local server with retry logic
+  const loadURL = () => {
+    win.loadURL('http://localhost:3000').catch(() => {
+      console.log("Next.js not ready, retrying in 2s...");
+      setTimeout(loadURL, 2000);
+    });
+  };
 
-  // Open the DevTools (Optional: for debugging)
-  // win.webContents.openDevTools();
+  loadURL();
+
+  // Show window only when content is ready to prevent blank screen
+  win.once('ready-to-show', () => {
+    win.show();
+  });
 }
 
 app.whenReady().then(() => {

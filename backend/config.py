@@ -58,12 +58,28 @@ PORT = 8000
 DIRECTIONS = ["north", "east", "south", "west"]
 
 # --------------------------------------------
-# AUTO-DETECT CAMERAS
+# AUTO-DETECT CAMERAS (Plug-and-Play)
 # --------------------------------------------
 def detect_cameras():
-    # Optimization: Use a public sample video for the demo/dev environment
+    """
+    Attempts to detect physical USB cameras (0, 1, 2, 3).
+    If a camera is not found, it falls back to the sample video URL.
+    """
     sample_url = "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4"
-    return {d: {"type": "video", "value": sample_url} for d in DIRECTIONS}
+    camera_sources = {}
+    
+    for i, d in enumerate(DIRECTIONS):
+        # Try to open the camera index i
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            print(f"[CONFIG] Hardware Camera detected for {d} (Index {i})")
+            camera_sources[d] = {"type": "camera", "value": i}
+            cap.release()
+        else:
+            print(f"[CONFIG] No camera at Index {i}, using Sample Video for {d}")
+            camera_sources[d] = {"type": "video", "value": sample_url}
+            
+    return camera_sources
 
 SOURCES = detect_cameras()
 FALLBACK_VIDEO = "videos/fallback.mp4"

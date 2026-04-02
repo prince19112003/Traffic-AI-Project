@@ -39,8 +39,17 @@ class TrafficEngine(mp.Process):
     def run(self):
         # Local import to prevent pickling issues on Windows
         from ultralytics import YOLO
+        import torch
         import os
         
+        # Patch for PyTorch 2.6+ "Weights only load failed" error
+        # Instead of adding classes one by one, we override torch.load to default weights_only=False
+        _original_load = torch.load
+        def _safe_load(*args, **kwargs):
+            kwargs['weights_only'] = False
+            return _original_load(*args, **kwargs)
+        torch.load = _safe_load
+
         print("[ENGINE] Initializing Multiprocess AI Engine...")
         self.model = YOLO(MODEL_NAME, task="detect")
         print(f"[ENGINE] YOLO PyTorch Loaded successfully.")
@@ -133,6 +142,7 @@ class TrafficEngine(mp.Process):
                 except: pass
             
             self.output_queue.put(output_payload)
+            print(f"[ENGINE] Inference Cycle Complete. Detections: {output_payload['analytics']}")
             
             # Control Engine FPS
             elapsed = time.time() - start_time

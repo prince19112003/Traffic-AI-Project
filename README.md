@@ -27,6 +27,11 @@ This isn't just software. It's ready for a physical lab prototype or real-world 
 No more complex terminal commands. We've added a master launcher for an effortless startup.
 - **`Launch_Traffic_AI.bat`**: A single click starts the Python AI Engine, the Next.js Server, and the Electron Desktop Window automatically.
 
+### 6. 📸 Plug-and-Play Camera Detection
+The system automatically scans your computer for connected USB cameras (Webcams). 
+- If a camera is found (at index 0, 1, 2, or 3), it uses the **Live Hardware Feed**. 
+- If no camera is detected, it automatically falls back to an **Intel Sample Video** for a seamless demonstration.
+
 ---
 
 ## 🏗️ Development Workflow & Live Updates
@@ -113,7 +118,21 @@ npm install
 # Start the dashboard
 npm run dev
 ```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+Open **[http://localhost:3000](http://localhost:3000)** in your browser or run the **Launch_Traffic_AI.bat** for a desktop experience.
+
+---
+
+## 🎥 Camera Setup
+
+To use your physical cameras for traffic detection:
+1.  Connect your USB camera(s) to the computer.
+2.  Launch the system using the batch file.
+3.  The backend will automatically assign:
+    - **Camera 0** ➜ North Lane
+    - **Camera 1** ➜ East Lane
+    - **Camera 2** ➜ South Lane
+    - **Camera 3** ➜ West Lane
+4.  If a lane doesn't have a physical camera, it will use the default training video.
 
 ---
 

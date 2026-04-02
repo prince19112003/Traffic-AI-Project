@@ -22,8 +22,11 @@ class ArduinoSerial:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
             print(f"[SERIAL] Connected to Arduino on {self.port}")
             time.sleep(2) # Wait for Arduino reset
-        except Exception as e:
-            print(f"[SERIAL ERROR] Could not connect to {self.port}: {e}")
+        except serial.SerialException as e:
+            if "FileNotFoundError" in str(e) or "2" in str(e):
+                print(f"[SERIAL INFO] Hardware not detected on {self.port}. Running in Software Mode.")
+            else:
+                print(f"[SERIAL ERROR] Could not connect to {self.port}: {e}")
             self.ser = None
 
     def send_signals(self, signal_map: dict):
