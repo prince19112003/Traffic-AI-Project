@@ -5,6 +5,7 @@ import TrafficGrid from '../components/TrafficGrid';
 import Sidebar from '../components/Sidebar';
 import AdminPanel from '../components/AdminPanel';
 import Header from '../components/Header';
+import { getNextMockPayload } from '../utils/mockGenerator';
 
 export default function TrafficDashboard() {
   const { 
@@ -16,6 +17,8 @@ export default function TrafficDashboard() {
 
   useEffect(() => {
     let ws = null;
+    let simInterval = null;
+
     if (!simulateMode) {
       try {
         ws = new WebSocket('ws://localhost:8000/ws');
@@ -31,9 +34,19 @@ export default function TrafficDashboard() {
       } catch {}
     } else {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) wsRef.current.close();
-      setConnected(false);
+      setConnected(true); // Active in Sim Mode
+
+      // New: Simulation Data Generator Loop
+      simInterval = setInterval(() => {
+        const mockPayload = getNextMockPayload();
+        updateData(mockPayload);
+      }, 1000);
     }
-    return () => { if (ws) ws.close(); }
+
+    return () => { 
+      if (ws) ws.close(); 
+      if (simInterval) clearInterval(simInterval);
+    }
   }, [simulateMode, updateData, setConnected]);
 
   const sendCommand = (cmd) => {

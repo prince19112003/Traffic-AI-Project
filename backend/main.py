@@ -12,6 +12,7 @@ from config import PORT, DIRECTIONS, CONFIG_PATH
 from engine import TrafficEngine
 from controller import TrafficController
 from utils.metrics import get_system_metrics
+from utils.arduino_serial import ArduinoSerial
 
 app = FastAPI(title="TrafficGuard Enterprise", version="2.0.0")
 
@@ -27,6 +28,8 @@ app.add_middleware(
 active_connections = []
 latest_data = {}
 controller = TrafficController()
+# Connect to Arduino (default COM3, set to False if no hardware)
+arduino = ArduinoSerial(port="COM3", enabled=True) 
 results_queue = None
 config_queue = None
 engine_proc = None
@@ -55,6 +58,10 @@ async def broadcast_task():
                     "status": "System Optimized (CPU)"
                 }
                 latest_data = payload
+                
+                # Send to Arduino Hardware
+                if arduino:
+                    arduino.send_signals(logic_status.get("signal_map", {}))
                 
                 if active_connections:
                     json_payload = json.dumps(payload)

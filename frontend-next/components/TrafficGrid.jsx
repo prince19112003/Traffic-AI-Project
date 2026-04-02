@@ -17,10 +17,16 @@ export default function TrafficGrid({ feeds, counts, logic, env }) {
     if (mode === 'MANUAL') return { text: 'LOCK', color: 'text-slate-400' };
     if (mode === 'ECO') return { text: 'ECO', color: 'text-indigo-400' };
     
+    // Check if this lane has a calculated wait timer (Red Timer)
+    const waitTimer = logic?.wait_timers?.[dir];
+    
     if (active_dir === dir) {
       const val = Math.max(0, Math.floor(timer));
       return { text: `${val}s`, color: 'text-emerald-400 animate-pulse' };
+    } else if (waitTimer !== undefined && waitTimer > 0) {
+      return { text: `${waitTimer}s`, color: 'text-orange-500 font-bold' };
     }
+    
     return { text: 'WAIT', color: 'text-slate-500' };
   };
 

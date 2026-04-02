@@ -44,6 +44,11 @@ class TrafficController:
         self.manual_override = False
         self.system_status = "System Running"
         self.predicted_violation_dir = None
+        
+        # New: Phase timing benchmarks
+        self.last_phase_start = time.time()
+        self.MIN_GREEN_TIME = 8 # Minimum green time before early switch
+        self.early_switch_triggered = False
 
     def calculate_adaptive_time(self, count: int) -> int:
         """Adaptive Green Time calculation based on vehicle density."""
@@ -61,6 +66,8 @@ class TrafficController:
         active_dir = self.phases[self.current_phase_idx]
         # Reset wait time for current green lane
         self.lane_wait_start[active_dir] = time.time()
+        self.last_phase_start = time.time()
+        self.early_switch_triggered = False
 
     def handle_manual_command(self, cmd: str):
         if cmd == "AUTO":
@@ -135,6 +142,18 @@ class TrafficController:
         if isinstance(self.timer, (int, float)) and self.timer > 0:
             self.timer -= delta
 
+        # 3.5 EARLY SWITCH (Optimizing Empty Lane)
+        if self.current_state == "GREEN" and not self.early_switch_triggered:
+            active_dir = self.phases[self.current_phase_idx]
+            active_count = current_counts.get(active_dir, 0)
+            time_in_phase = now - self.last_phase_start
+            
+            # If lane empty and min time passed, cut timer
+            if active_count == 0 and time_in_phase > self.MIN_GREEN_TIME and self.timer > 2:
+                self.timer = 2 # 2s final buffer for safety
+                self.early_switch_triggered = True
+                self.system_status = f"⚡ Optimizing: Empty Lane {active_dir.upper()}"
+
         # 4. TRANSITIONS
         if self.current_state == "GREEN" and self.timer <= 0:
             # Transition to YELLOW
@@ -156,7 +175,7 @@ class TrafficController:
         if total_traffic == 0 and self.current_state != "GREEN" and self.timer <= 0:
             self.current_state = "ECO"
             self.system_status = "🌙 ECO Mode: Idle"
-            return self._build_state_response(mode="ECO", state="ECO", timer="SLEEP", signal="YELLOW")
+            return self._build_state_response(mode="ECO", state="ECO", timer="SLEEP", signal="YELLOW", current_counts=current_counts)
 
         if self.current_state == "ECO" and total_traffic > 0:
             self.system_status = "Traffic Detected: Waking Up"
@@ -165,7 +184,7 @@ class TrafficController:
         # 6. VIOLATION PREDICTION
         self._update_predicted_violation(current_counts)
 
-        return self._build_state_response()
+        return self._build_state_response(current_counts=current_counts)
 
     def _update_predicted_violation(self, current_counts: dict):
         self.predicted_violation_dir = None
@@ -176,19 +195,33 @@ class TrafficController:
                     self.predicted_violation_dir = d
                     break
 
-    def _build_state_response(self, mode="AUTO", state=None, timer=None, signal=None):
+    def _build_state_response(self, mode="AUTO", state=None, timer=None, signal=None, current_counts=None):
         if state is None: state = self.current_state
         if timer is None:
             timer = max(0, int(self.timer)) if isinstance(self.timer, (int, float)) else self.timer
         
         active = self.phases[self.current_phase_idx]
-        next_dir = self.phases[(self.current_phase_idx + 1) % len(self.phases)] # Default next
+        
+        # Calculate next lane for Red Timer
+        if current_counts:
+            next_idx = self._get_weighted_next_phase(current_counts)
+        else:
+            next_idx = (self.current_phase_idx + 1) % len(self.phases)
+        
+        next_dir = self.phases[next_idx]
         
         signal_map = {p: "RED" for p in self.phases}
+        wait_timers = {p: -1 for p in self.phases} # -1 means no timer
+
         if signal:
             signal_map = {p: signal for p in self.phases}
         else:
             if state != "ECO": signal_map[active] = state
+
+        # RED TIMER LOGIC: If state is GREEN/YELLOW, next lane shows countdown
+        if state in ["GREEN", "YELLOW"] and next_dir != active:
+            yellow_boost = (SAFETY_YELLOW_TIME if self.is_raining else YELLOW_TIME) if state == "GREEN" else 0
+            wait_timers[next_dir] = max(0, int(self.timer) + yellow_boost)
 
         return {
             "active_dir": active,
@@ -198,5 +231,6 @@ class TrafficController:
             "mode": mode,
             "status": self.system_status,
             "signal_map": signal_map,
+            "wait_timers": wait_timers,
             "predicted_violation_dir": self.predicted_violation_dir,
         }
