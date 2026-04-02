@@ -1,4 +1,9 @@
-# 🚦 TrafficGuard AI: The Ultimate Smart Traffic Management System
+# 🚦 TrafficGuard AI: Next-Gen Urban Traffic Management (UHD)
+
+> [!CAUTION]
+> **PROPRIETARY SYSTEM**: This project is the intellectual property of **Prince**. No unauthorized copying, distribution, or commercial use is permitted without written consent. See [LICENSE](file:///c:/Users/princ/Desktop/New%20folder/Traffic-AI-Project/LICENSE) for details.
+
+---
 
 **TrafficGuard AI** is a cutting-edge, enterprise-grade traffic control solution that combines **Computer Vision (YOLOv8)**, **Adaptive Logic Algorithms**, and **Hardware Integration** to solve modern urban congestion challenges. 
 
@@ -172,3 +177,8 @@ This ensures that even a road with 1 car will eventually get a green light if it
 *This project was built to rethink how cities approach congestion. By combining AI with hardware, we create a system that is not only smart but also physically actionable.*
 
 Developed with ❤️ by **Prince**.
+
+## ⚖️ License & Ownership
+**© 2026 Prince (prince19112003)**. All Rights Reserved. 
+
+Developed with ❤️ for Intelligent Traffic Solutions.
