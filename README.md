@@ -19,10 +19,28 @@ This isn't just software. It's ready for a physical lab prototype or real-world 
 - **Arduino Integration**: Direct Serial communication to control LEDs and Relays.
 - **Wiring Guide Included**: Complete pin mapping for Arduino Uno to 12-lamp traffic signal arrays.
 
-### 3. 🧠 AI-Powered Computer Vision
-- **Batch Processing**: Processes 4 HD camera feeds simultaneously using a multi-threaded engine.
-- **ONNX Optimization**: Optimized YOLOv8 models for 3x speed boost on standard laptop CPUs.
-- **Violation Detection**: Automatically detects and handles Red-Light violations using ROI (Region of Interest) tracking.
+### 4. 🚀 Ultra-Performance Backend
+- **Asynchronous WebSocket Broadcasting**: Updates all connected clients and hardware links simultaneously with sub-50ms latency.
+- **ONNX Inference**: 3x speed boost on standard CPUs, making expensive GPUs unnecessary.
+
+### 5. ⚡ One-Click Command Center (New)
+No more complex terminal commands. We've added a master launcher for an effortless startup.
+- **`Launch_Traffic_AI.bat`**: A single click starts the Python AI Engine, the Next.js Server, and the Electron Desktop Window automatically.
+
+---
+
+## 🏗️ Development Workflow & Live Updates
+
+This project is built for **Rapid Prototyping**. If you are a developer, here is how you can work with it:
+
+### 1. Frontend Changes (UI)
+- **Hot Module Replacement (HMR)**: Any changes you make in the `frontend-next/` folder (React components, CSS, etc.) will be reflected **instantly** in the Desktop App window without restarting.
+
+### 2. Backend Changes (Logic)
+- If you modify the AI logic or timing algorithms in `backend/`, simply close the Backend terminal window and re-launch the system using the batch file.
+
+### 3. Hardware Changes
+- Arduino code updates require a fresh "Upload" via the Arduino IDE to the physical board.
 
 ### 4. 🎮 Full-Featured Simulation Mode
 Perfect for exhibitions and demos.
@@ -76,21 +94,17 @@ Traffic-AI-Project/
 - **Node.js 18 or higher**
 - **Arduino IDE** (if using hardware)
 
-### 2. Backend Initialization
+### 2. Quick Start (Desktop Mode)
+1. Go to the project root folder.
+2. Double-click **`Launch_Traffic_AI.bat`**.
+3. Wait **12 seconds** for all services to synchronize.
+4. The **Command Center** will open automatically.
+
+### 3. Manual Launch (Development Mode)
 ```bash
-# Navigate to backend
+# Terminal 1: Backend
 cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the AI Server
 python main.py
-```
-
-### 3. Frontend Dashboard Launch
-```bash
-# Navigate to frontend
 cd frontend-next
 
 # Install UI modules

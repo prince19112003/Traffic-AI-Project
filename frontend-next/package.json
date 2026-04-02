@@ -2,11 +2,13 @@
   "name": "traffic-guard-enterprise",
   "version": "2.0.0",
   "private": true,
+  "main": "main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "desktop": "electron ."
   },
   "dependencies": {
     "clsx": "^2.1.0",
